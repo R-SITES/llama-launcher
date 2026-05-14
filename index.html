@@ -1968,18 +1968,19 @@ function getCurrentCtxSize() {
 function updateCtxCard() {
   const cards = document.getElementById('infoCards');
   if (!cards) return;
-  const ctxEl = cards.querySelector('[data-ctx]');
-  if (!ctxEl) return;
+  const card = cards.querySelector('[data-ctx]');
+  if (!card) return;
+  const valEl = card.querySelector('.value');
+  if (!valEl) return;
   const val = getCurrentCtxSize();
   const newValStr = String(val);
   if (_lastCtxSize !== newValStr) {
     _lastCtxSize = newValStr;
-    ctxEl.textContent = newValStr;
+    valEl.textContent = newValStr;
     // Highlight orange when it differs from model default
-    const card = ctxEl.closest('.info-card');
-    if (card && selectedModel && String(selectedModel.ctx) !== newValStr) {
+    if (selectedModel && String(selectedModel.ctx) !== newValStr) {
       card.classList.add('ctx-override');
-    } else if (card) {
+    } else {
       card.classList.remove('ctx-override');
     }
   }
