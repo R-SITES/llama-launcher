@@ -49,10 +49,6 @@ When you run `python server.py`, it starts a web server on **http://localhost:98
 6. **Download models** — Search Hugging Face Hub for GGUF models and download them directly
 7. **Hardware overview** — See CPU, RAM, GPU at a glance
 
-### Preset System (Checkpoints/)
-
-The `Checkpoints/` folder contains versioned presets (1.0 through 2.2) saved during development. Each checkpoint is a complete snapshot of the UI and server at that version. You can load them to see how the launcher evolved, or use them as reference for your own setups.
-
 ## Quick Start
 
 ```bash
