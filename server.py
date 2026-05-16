@@ -410,6 +410,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             self._serve_launch()
         elif self.path == "/api/status":
             self._serve_status()
+        elif self.path == "/api/launch-log":
+            self._serve_launch_log()
         elif parsed.path == "/api/hf-search-gguf":
             q = params.get("q", [""])[0]
             page = int(params.get("page", ["1"])[0])
@@ -903,6 +905,19 @@ CRITICAL:
 
         proc = None
         term_name = None
+        # Capture launch stderr for error log modal
+        launch_log_path = os.path.expanduser("~/llama-launch-stderr.log")
+        # Clear old log before launch so stale entries don't pollute
+        try:
+            with open(launch_log_path, "w") as lf:
+                lf.write("")
+        except Exception:
+            pass
+        # Capture ALL stderr output to the log file.
+        # Terminal emulators (ptyxis via xdg-terminal-exec) don't relay their
+        # child's stderr — proc.stderr.PIPE on the emulator itself is always empty.
+        # Using 2>> redirect directly since ptyxis breaks pipe-based captures (| tee).
+        launch_cmd = f"{cmd_str} 2>>{launch_log_path}"
 
         for term_cmd, name in terminal_procs:
             try:
@@ -935,88 +950,122 @@ CRITICAL:
             "success": True
         })
 
+    def _serve_launch_log(self):
+        """Return the last launch stderr log."""
+        log_path = os.path.expanduser("~/llama-launch-stderr.log")
+        try:
+            if os.path.isfile(log_path):
+                with open(log_path, "r") as f:
+                    log = f.read()
+                self._json({"logs": log or "(empty log)"})
+            else:
+                self._json({"logs": "(no launch log found)"})
+        except Exception as e:
+            self._json({"logs": f"Failed to read log: {e}"})
+
     def _serve_builds(self):
-        """Scan ~/llama.cpp/ for build directories with llama-server."""
+        """Scan ~/llama.cpp/ for build directories with llama-server.
+        Only returns builds that actually exist on disk — no hardcoded extras."""
         import os, glob, subprocess
 
         base = os.path.expanduser("~/llama.cpp")
-        builds = [{"name": "build", "path": "~/llama.cpp/build/bin/llama-server", "desc": "SYCL+MTP (v1.0 build)"}]
+        builds = []
 
-        # Detect any build-* directories
+        # Scan build-* directories only — bare 'build' is ambiguous
+        backend = "CPU"
         for d in sorted(glob.glob(os.path.join(base, "build-*"))):
+            if not os.path.isdir(d):
+                continue
             bin_path = os.path.join(d, "bin", "llama-server")
+            if not os.path.isfile(bin_path):
+                continue
             dirname = os.path.basename(d)
-            if os.path.isfile(bin_path):
-                # Detect backend from binary
+            rel_path = f"~/llama.cpp/{dirname}/bin/llama-server"
+
+            # Detect backend from directory name (reliable, doesn't crash SYCL)
+            if "sycl" in dirname.lower():
                 backend = "SYCL"
+            elif "vulkan" in dirname.lower():
+                backend = "Vulkan"
+            else:
+                # Fallback: try binary --version (only works for non-SYCL)
+                backend = "Unknown"
+                bin_path_abs = os.path.join(d, "bin", "llama-server")
                 try:
-                    ver = subprocess.run([bin_path, "--version"], capture_output=True, text=True, timeout=5)
+                    env = os.environ.copy()
+                    env["LD_LIBRARY_PATH"] = (
+                        "/opt/intel/oneapi/compiler/2025.3/lib:"
+                        + env.get("LD_LIBRARY_PATH", "")
+                    )
+                    ver = subprocess.run([bin_path_abs, "--version"], capture_output=True, text=True, timeout=5, env=env)
                     output = ver.stdout + ver.stderr
-                    if "GNU" in output:
-                        backend = "Vulkan"
-                    elif "IntelLLVM" in output:
+                    if "IntelLLVM" in output:
                         backend = "SYCL"
-                except:
+                    elif "GNU" in output:
+                        backend = "Vulkan"
+                except Exception:
                     pass
-                builds.append({
-                    "name": dirname,
-                    "path": f"~/llama.cpp/{dirname}/bin/llama-server",
-                    "desc": f"{backend} ({dirname.replace('build-', '')})"
-                })
 
-        # Add hybrid variant (uses ~/llama.cpp/build-hybrid/bin/llama-server)
-        hybrid_bin = os.path.expanduser("~/llama.cpp/build-hybrid/bin/llama-server")
-        if os.path.isfile(hybrid_bin):
             builds.append({
-                "name": "hybrid",
-                "path": "~/llama.cpp/build-hybrid/bin/llama-server",
-                "desc": "Vulkan (hybrid)"
-            })
-
-        # Add SYCLMTP variant - SYCL backend with MTP draft head support
-        if os.path.isfile(os.path.expanduser("~/llama.cpp/build/bin/llama-server")):
-            builds.append({
-                "name": "SYCLMTP",
-                "path": "~/llama.cpp/build/bin/llama-server",
-                "desc": "SYCL (SYCLMTP)"
-            })
-
-        # Add mainline variant - compiled from master branch with SYCL + MTP
-        mainline_bin = os.path.expanduser("~/llama.cpp/mainline/bin/llama-server")
-        if os.path.isfile(mainline_bin):
-            builds.append({
-                "name": "mainline",
-                "path": mainline_bin,
-                "desc": "SYCL (mainline)"
+                "name": dirname,
+                "path": rel_path,
+                "desc": f"{backend} ({dirname.replace('build-', '')})"
             })
 
         # Enrich with build numbers and commit hashes from each binary
+        import re
         for b in builds:
             ver = ""
             commit = ""
-            bin_path = os.path.expanduser(b["path"])
-            if os.path.isfile(bin_path):
-                try:
-                    out = subprocess.run(
-                        [bin_path, "--version"],
-                        capture_output=True, text=True, timeout=5
-                    )
-                    output = out.stdout + out.stderr
-                    # Extract build number: "version: 9139 (e7b484815)"
-                    import re
-                    m = re.search(r'version:\s+(\d+)', output)
-                    if m:
-                        ver = m.group(1)
-                    # Extract commit hash
-                    m = re.search(r'\(([0-9a-f]{7,})\)', output)
-                    if m:
-                        commit = m.group(1)
-                except Exception:
-                    pass
             b["build"] = ver
             b["commit"] = commit or ""
+            # Detect backend from directory name per-build
+            name_lower = b.get("name", "").lower()
+            b["backend"] = "SYCL" if "sycl" in name_lower else "Vulkan" if "vulkan" in name_lower else "Unknown"
+            b["mtp"] = False
 
-        self._json({"builds": builds, "default": "build"})
+            # Try to get version/commit from binary, but catch crashes (SYCL)
+            bin_path = os.path.expanduser(b["path"])
+            if os.path.isfile(bin_path):
+                # Check if it's SYCL - skip binary execution, use dirname-based info
+                if "sycl" in name_lower:
+                    # SYCL: detect MTP from libllama-common.so (binary crashes on --help)
+                    bin_dir = os.path.dirname(bin_path)
+                    lib_path = os.path.join(bin_dir, "libllama-common.so")
+                    try:
+                        mtp_check = subprocess.run(
+                            ["strings", lib_path], capture_output=True, text=True, timeout=5
+                        )
+                        b["mtp"] = "draft-mtp" in mtp_check.stdout
+                    except Exception:
+                        b["mtp"] = False
+                else:
+                    # Non-SYCL: can safely run --version and --help
+                    try:
+                        env = os.environ.copy()
+                        out = subprocess.run(
+                            [bin_path, "--version"],
+                            capture_output=True, text=True, timeout=5,
+                            env=env
+                        )
+                        output = out.stdout + out.stderr
+                        m = re.search(r'version:\s+(\d+)', output)
+                        if m:
+                            b["build"] = m.group(1)
+                        m = re.search(r'\(([0-9a-f]{7,})\)', output)
+                        if m:
+                            b["commit"] = m.group(1)
+                        # Detect MTP from --help
+                        help_out = subprocess.run(
+                            [bin_path, "--help"],
+                            capture_output=True, text=True, timeout=5,
+                            env=env
+                        )
+                        b["mtp"] = "draft-mtp" in (help_out.stdout + help_out.stderr)
+                    except Exception:
+                        pass
+
+        self._json({"builds": builds, "default": builds[0]["name"] if builds else "build"})
 
     def _serve_status(self):
         """Return server status, throughput, and selected model."""

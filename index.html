@@ -314,6 +314,38 @@
     line-height: 1.4;
   }
 
+  /* Extra cmd env presets pills */
+  .extrapills-bar {
+    display: flex; flex-wrap: wrap; gap: 4px; padding: 6px 0 0;
+    min-height: 0;
+  }
+  .extrapill {
+    display: inline-flex; align-items: center; gap: 3px;
+    padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 500;
+    background: rgba(88,166,255,0.12); border: 1px solid rgba(88,166,255,0.25);
+    color: var(--accent); cursor: pointer; white-space: nowrap;
+    transition: 0.15s; max-width: 140px; overflow: hidden; text-overflow: ellipsis;
+  }
+  .extrapill:hover { background: rgba(88,166,255,0.25); }
+  .extrapill .extrapill-del {
+    font-size: 9px; cursor: pointer; opacity: 0.5; margin-left: 1px;
+  }
+  .extrapill .extrapill-del:hover { opacity: 1; }
+  .extra-save-btn {
+    font-size: 10px; padding: 2px 10px; border-radius: 8px; border: 1px solid rgba(88,166,255,0.3);
+    background: transparent; color: var(--accent); cursor: pointer; font-family: inherit;
+    transition: 0.15s;
+  }
+  .extra-save-btn:hover { background: rgba(88,166,255,0.15); }
+
+  /* Error Log Modal */
+  .error-log-pre {
+    background: #0a0a0a; color: #e6e6e6; font-size: 11px; line-height: 1.5;
+    padding: 16px; margin: 0; overflow: auto; flex: 1;
+    white-space: pre-wrap; word-break: break-all;
+    font-family: 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
+  }
+
   /* Non-negotiable section */
   .non-neg-section {
     background: var(--surface);
@@ -1219,6 +1251,11 @@
             </div>
             <div class="extra-cmd-body">
               <textarea id="extraCmdInput" placeholder="e.g. export ZES_ENABLE_SYSMAN=1&#10;export SYCL_PI_LEVEL_ZERO_USM_ALLOCATOR=1&#10;export ZE_FLAT_DEVICE_HIERARCHY=COMPOSITE" oninput="regenerateCommand()"></textarea>
+              <div style="display:flex;align-items:center;gap:6px;margin-top:6px;">
+                <span style="font-size:10px;color:var(--text-dim);font-weight:600;">Presets:</span>
+                <button class="extra-save-btn" onclick="saveExtraPreset()">+ Save</button>
+              </div>
+              <div class="extrapills-bar" id="extraPillsBar"></div>
               <div class="extra-cmd-hint">Prepended to command, BEFORE the source/setvars line. One per line.</div>
             </div>
           </div>
@@ -1314,6 +1351,22 @@
   </div>
 </div>
 
+<!-- Error Log Modal -->
+<div class="modal-overlay" id="errorLogModal">
+  <div class="modal" style="width:850px;">
+    <div class="modal-header">
+      <h2> Launch Error Logs</h2>
+      <button class="modal-close" onclick="closeErrorLogs()">✕</button>
+    </div>
+    <div class="modal-body" style="padding:0;flex:1;overflow:hidden;display:flex;flex-direction:column;">
+      <pre id="errorLogContent" class="error-log-pre">Loading logs...</pre>
+    </div>
+    <div class="modal-footer">
+      <button class="hf-dl-btn" onclick="closeErrorLogs()" style="background:var(--red);"> Close</button>
+    </div>
+  </div>
+</div>
+
 <!-- Toast notification -->
 <div class="toast" id="toast">
   <button class="toast-close" onclick="hideToast()">✕</button>
@@ -1360,6 +1413,92 @@ function showToast(title, body, isError = false) {
 function hideToast() {
   const toast = document.getElementById('toast');
   toast.style.display = 'none';
+}
+
+// ── Extra Command Presets (persisted in localStorage) ──
+const EXTRA_PRESETS_KEY = 'llama_extra_presets';
+let _extraPresets = [];
+
+function loadExtraPresets() {
+  try {
+    _extraPresets = JSON.parse(localStorage.getItem(EXTRA_PRESETS_KEY)) || [];
+  } catch (e) { _extraPresets = []; }
+  renderExtraPills();
+}
+
+function saveExtraPresets() {
+  try {
+    localStorage.setItem(EXTRA_PRESETS_KEY, JSON.stringify(_extraPresets));
+  } catch (e) {}
+}
+
+function renderExtraPills() {
+  const bar = document.getElementById('extraPillsBar');
+  if (!bar) return;
+  if (_extraPresets.length === 0) {
+    bar.innerHTML = '';
+    return;
+  }
+  bar.innerHTML = _extraPresets.map((preset, i) =>
+    `<span class="extrapill" onclick="applyExtraPreset(${i})" title="${escAttr(preset.content)}">
+      ${escHtml(preset.name)}
+      <span class="extrapill-del" onclick="event.stopPropagation();deleteExtraPreset(${i})">✕</span>
+    </span>`
+  ).join('');
+}
+
+function saveExtraPreset() {
+  const textarea = document.getElementById('extraCmdInput');
+  const content = textarea.value.trim();
+  if (!content) return;
+  const firstLine = content.split('\n')[0].trim().replace(/^export /, '');
+  const name = firstLine.split('=')[0] || `Preset ${_extraPresets.length + 1}`;
+  const shortName = name.length > 18 ? name.substring(0, 16) + '\u2026' : name;
+  _extraPresets.push({ name: shortName, content });
+  saveExtraPresets();
+  renderExtraPills();
+}
+
+function applyExtraPreset(index) {
+  const preset = _extraPresets[index];
+  if (!preset) return;
+  const textarea = document.getElementById('extraCmdInput');
+  const current = textarea.value.trim();
+  if (current && !current.endsWith('\n')) {
+    textarea.value = current + '\n' + preset.content;
+  } else {
+    textarea.value = (current ? current + '\n' : '') + preset.content;
+  }
+  regenerateCommand();
+}
+
+function deleteExtraPreset(index) {
+  _extraPresets.splice(index, 1);
+  saveExtraPresets();
+  renderExtraPills();
+}
+
+// ── Error Log Modal ──
+async function showErrorLogs() {
+  const overlay = document.getElementById('errorLogModal');
+  const content = document.getElementById('errorLogContent');
+  content.textContent = 'Fetching logs...';
+  overlay.classList.add('show');
+  try {
+    const res = await fetch('/api/launch-log');
+    if (res.ok) {
+      const data = await res.json();
+      content.textContent = data.logs || '(empty logs)';
+    } else {
+      content.textContent = 'Failed to fetch launch logs';
+    }
+  } catch (e) {
+    content.textContent = 'Error fetching logs: ' + e.message;
+  }
+}
+
+function closeErrorLogs() {
+  document.getElementById('errorLogModal').classList.remove('show');
 }
 
 // ── Delete Model ──
@@ -1426,8 +1565,11 @@ async function loadBuilds() {
     sel.innerHTML = data.builds.map(b => {
       const desc = b.desc || b.name;
       let label = desc;
-      if (b.build) label += ` [${b.build}]`;
-      if (b.commit) label += ` (${b.commit})`;
+      if (b.build) label += ` [#${b.build}`;
+      if (b.commit) label += ` @${b.commit}`;
+      if (b.build) label += `]`;
+      label += ` | ${b.backend || '?'}`;
+      label += b.mtp ? ' | ✅MTP' : ' | NoMTP';
       return `<option value="${b.name}"${b.name === effectiveSaved ? ' selected' : ''}>${label}</option>`;
     }).join('');
     _selectedBuild = effectiveSaved;
@@ -2875,6 +3017,7 @@ function launchServer() {
         btn.classList.remove('working');
         btn.innerHTML = '⚠️ Launch Failed';
         showToast('Launch Failed', data.error || 'Unknown error', true);
+        setTimeout(() => showErrorLogs(), 500);
         setTimeout(() => { btn.innerHTML = '▶️ Launch Server'; }, 3000);
         return;
       }
@@ -2929,6 +3072,7 @@ function launchServer() {
                 'llama-server did not start in 15 seconds. Check the terminal window.',
                 true
               );
+              setTimeout(() => showErrorLogs(), 500);
               setTimeout(() => { btn.innerHTML = '▶️ Launch Server'; }, 3000);
             }
           })
@@ -3010,6 +3154,19 @@ function loadPill(index) {
   activeFlags = JSON.parse(JSON.stringify(cmd.activeFlags));
   document.getElementById('nonNegInput').value = cmd.nonNeg || '';
   document.getElementById('extraCmdInput').value = cmd.extraCmd || '';
+
+  // Re-prefill -hf value for HF cache models (preserved from selectModel pre-fill)
+  if (selectedModel && selectedModel.model_id && !activeFlags['-hf'] && !activeFlags['hf'] && !activeFlags['--hf-repo']) {
+    const hfFlag = findFlagById('-hf');
+    if (hfFlag) {
+      const hfValue = selectedModel.hf_tag || (selectedModel.model_id + ':' + (selectedModel.name || '').replace(/\.gguf$/i, ''));
+      activeFlags['-hf'] = {
+        active: false,
+        value: hfValue,
+        flag: hfFlag,
+      };
+    }
+  }
 
   renderActiveFlags();
   renderFlags();
@@ -3184,6 +3341,7 @@ loadSystemInfo();
 loadFlagsDB();
 loadModels();
 loadBuilds(); // Build variant selector (loads llama-server from different build dirs)
+loadExtraPresets(); // Load saved extra cmd presets
 pollServerStatus(); // Start live status polling
 
 // Load saved multi-commands on startup
@@ -3346,7 +3504,20 @@ function loadPreset(index) {
   }
 
   loadedPresetIndex = index;
-  
+
+  // Re-prefill -hf value for HF cache models (preserved from selectModel pre-fill)
+  if (selectedModel && selectedModel.model_id && !activeFlags['-hf'] && !activeFlags['hf'] && !activeFlags['--hf-repo']) {
+    const hfFlag = findFlagById('-hf');
+    if (hfFlag) {
+      const hfValue = selectedModel.hf_tag || (selectedModel.model_id + ':' + (selectedModel.name || '').replace(/\.gguf$/i, ''));
+      activeFlags['-hf'] = {
+        active: false,
+        value: hfValue,
+        flag: hfFlag,
+      };
+    }
+  }
+
   renderActiveFlags();
   renderFlags();
   regenerateCommand();

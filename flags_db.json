@@ -88,13 +88,22 @@
     {
       "flag": "--no-mmproj",
       "type": "bool",
-      "help": "Disable multimodal projector (mmproj) — prevents loading vision encoder even if mmproj file is present"
+      "help": "Disable multimodal projector (mmproj) \u2014 prevents loading vision encoder even if mmproj file is present"
     },
     {
       "flag": "--chat-template-file",
       "type": "path",
       "hint": "FNAME",
       "help": "Path to a chat template .jinja file (e.g. ~/models/chat_template-v15.jinja)"
+    },
+    {
+      "flag": "--checkpoint-every-n-tokens",
+      "type": "int",
+      "hint": "N",
+      "help": "Create a checkpoint every N tokens during prefill. -1 disables checkpoints entirely.",
+      "default": -1,
+      "min": -1,
+      "step": 1
     }
   ],
   "sampling": [
@@ -291,7 +300,17 @@
       "flag": "-ctk",
       "full": "--cache-type-k",
       "type": "select",
-      "options": ["f32", "f16", "bf16", "q8_0", "q4_0", "q4_1", "iq4_nl", "q5_0", "q5_1"],
+      "options": [
+        "f32",
+        "f16",
+        "bf16",
+        "q8_0",
+        "q4_0",
+        "q4_1",
+        "iq4_nl",
+        "q5_0",
+        "q5_1"
+      ],
       "help": "KV cache K data type",
       "default": "f16"
     },
@@ -299,7 +318,17 @@
       "flag": "-ctv",
       "full": "--cache-type-v",
       "type": "select",
-      "options": ["f32", "f16", "bf16", "q8_0", "q4_0", "q4_1", "iq4_nl", "q5_0", "q5_1"],
+      "options": [
+        "f32",
+        "f16",
+        "bf16",
+        "q8_0",
+        "q4_0",
+        "q4_1",
+        "iq4_nl",
+        "q5_0",
+        "q5_1"
+      ],
       "help": "KV cache V data type",
       "default": "f16"
     },
@@ -1267,7 +1296,17 @@
       "flag": "-ctkd",
       "full": "--cache-type-k-draft",
       "type": "select",
-      "options": ["f32", "f16", "bf16", "q8_0", "q4_0", "q4_1", "iq4_nl", "q5_0", "q5_1"],
+      "options": [
+        "f32",
+        "f16",
+        "bf16",
+        "q8_0",
+        "q4_0",
+        "q4_1",
+        "iq4_nl",
+        "q5_0",
+        "q5_1"
+      ],
       "help": "KV cache K data type for draft model",
       "default": "f16"
     },
@@ -1275,7 +1314,17 @@
       "flag": "-ctvd",
       "full": "--cache-type-v-draft",
       "type": "select",
-      "options": ["f32", "f16", "bf16", "q8_0", "q4_0", "q4_1", "iq4_nl", "q5_0", "q5_1"],
+      "options": [
+        "f32",
+        "f16",
+        "bf16",
+        "q8_0",
+        "q4_0",
+        "q4_1",
+        "iq4_nl",
+        "q5_0",
+        "q5_1"
+      ],
       "help": "KV cache V data type for draft model",
       "default": "f16"
     },
@@ -1311,7 +1360,10 @@
       "flag": "--spec-draft-cpu-strict",
       "full": "--cpu-strict-draft",
       "type": "select",
-      "options": ["0", "1"],
+      "options": [
+        "0",
+        "1"
+      ],
       "help": "Use strict CPU placement for draft model (0=no, 1=yes)"
     },
     {
@@ -1325,7 +1377,10 @@
       "flag": "--spec-draft-poll",
       "full": "--poll-draft",
       "type": "select",
-      "options": ["0", "1"],
+      "options": [
+        "0",
+        "1"
+      ],
       "help": "Use polling for draft model work (0=no, 1=yes)"
     },
     {
@@ -1339,7 +1394,10 @@
       "flag": "--spec-draft-cpu-strict-batch",
       "full": "--cpu-strict-batch-draft",
       "type": "select",
-      "options": ["0", "1"],
+      "options": [
+        "0",
+        "1"
+      ],
       "help": "Use strict CPU placement for batch draft (0=no, 1=yes)"
     },
     {
@@ -1353,7 +1411,10 @@
       "flag": "--spec-draft-poll-batch",
       "full": "--poll-batch-draft",
       "type": "select",
-      "options": ["0", "1"],
+      "options": [
+        "0",
+        "1"
+      ],
       "help": "Use polling for draft model batch work (0=no, 1=yes)"
     },
     {
