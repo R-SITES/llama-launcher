@@ -342,7 +342,7 @@
   .error-log-pre {
     background: #0a0a0a; color: #e6e6e6; font-size: 11px; line-height: 1.5;
     padding: 16px; margin: 0; overflow: auto; flex: 1;
-    white-space: pre-wrap; word-break: break-all;
+    max-height: 70vh; white-space: pre-wrap; word-wrap: break-word;
     font-family: 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
   }
 
@@ -1479,16 +1479,27 @@ function deleteExtraPreset(index) {
 }
 
 // ── Error Log Modal ──
+let _errorLogRetries = 0;
 async function showErrorLogs() {
   const overlay = document.getElementById('errorLogModal');
   const content = document.getElementById('errorLogContent');
   content.textContent = 'Fetching logs...';
   overlay.classList.add('show');
   try {
-    const res = await fetch('/api/launch-log');
+    const res = await fetch('/api/launch-log?lines=500');
     if (res.ok) {
       const data = await res.json();
-      content.textContent = data.logs || '(empty logs)';
+      const logText = data.logs || '';
+      // If log is empty, retry up to 3 times with 1s delay (terminal may still be starting)
+      if ((logText === '(empty log)' || logText === '(no launch log found)' || logText === '') && _errorLogRetries < 3) {
+        _errorLogRetries++;
+        setTimeout(() => {
+          showErrorLogs();
+        }, 1000);
+        return;
+      }
+      _errorLogRetries = 0;
+      content.textContent = logText;
     } else {
       content.textContent = 'Failed to fetch launch logs';
     }
@@ -1498,6 +1509,7 @@ async function showErrorLogs() {
 }
 
 function closeErrorLogs() {
+  _errorLogRetries = 0;
   document.getElementById('errorLogModal').classList.remove('show');
 }
 

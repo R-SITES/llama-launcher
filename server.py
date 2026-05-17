@@ -410,7 +410,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             self._serve_launch()
         elif self.path == "/api/status":
             self._serve_status()
-        elif self.path == "/api/launch-log":
+        elif parsed.path == "/api/launch-log":
             self._serve_launch_log()
         elif parsed.path == "/api/hf-search-gguf":
             q = params.get("q", [""])[0]
@@ -892,8 +892,22 @@ CRITICAL:
         if "llama-server" in cmd_str and "--metrics" not in cmd_str:
             cmd_str = cmd_str + " --metrics"
 
-        # Run the raw command in a terminal, nohup or background — just the command
-        launch_cmd = cmd_str
+        # Capture launch stderr for error log modal
+        launch_log_path = os.path.expanduser("~/llama-launch-stderr.log")
+        # Clear old log before launch so stale entries don't pollute
+        try:
+            with open(launch_log_path, "w") as lf:
+                lf.write("")
+        except Exception:
+            pass
+        # Capture ALL stderr output to the log file, including bash-level errors.
+        # Terminal emulators (ptyxis via xdg-terminal-exec) don't relay their
+        # child's stderr — proc.stderr.PIPE on the emulator itself is always empty.
+        # Using { cmd; } 2>>log instead of raw 2>> because:
+        #   (a) plain cmd && cmd2 2>>log only redirects the LAST command
+        #   (b) the {} group captures ALL commands' stderr in the chain
+        #   (c) bash-level errors (segfault, command-not-found) also go to the log
+        launch_cmd = f"{{ {cmd_str}; }} 2>>{launch_log_path}"
 
         terminal_procs = [
             (["xdg-terminal-exec", "bash", "-c", launch_cmd], "xdg-terminal-exec"),
@@ -905,19 +919,6 @@ CRITICAL:
 
         proc = None
         term_name = None
-        # Capture launch stderr for error log modal
-        launch_log_path = os.path.expanduser("~/llama-launch-stderr.log")
-        # Clear old log before launch so stale entries don't pollute
-        try:
-            with open(launch_log_path, "w") as lf:
-                lf.write("")
-        except Exception:
-            pass
-        # Capture ALL stderr output to the log file.
-        # Terminal emulators (ptyxis via xdg-terminal-exec) don't relay their
-        # child's stderr — proc.stderr.PIPE on the emulator itself is always empty.
-        # Using 2>> redirect directly since ptyxis breaks pipe-based captures (| tee).
-        launch_cmd = f"{cmd_str} 2>>{launch_log_path}"
 
         for term_cmd, name in terminal_procs:
             try:
@@ -951,12 +952,27 @@ CRITICAL:
         })
 
     def _serve_launch_log(self):
-        """Return the last launch stderr log."""
+        """Return last N lines of launch stderr log (default: all, use ?lines=500 for tail)."""
+        from urllib.parse import urlparse, parse_qs
+        parsed = urlparse(self.path)
+        params = parse_qs(parsed.query)
+        n_lines = 500
+        try:
+            val = params.get("lines", [None])[0]
+            if val is not None:
+                n_lines = int(val)
+        except (ValueError, TypeError):
+            n_lines = 500
+
         log_path = os.path.expanduser("~/llama-launch-stderr.log")
         try:
             if os.path.isfile(log_path):
                 with open(log_path, "r") as f:
-                    log = f.read()
+                    lines = f.readlines()
+                if n_lines > 0 and len(lines) > n_lines:
+                    log = "".join(lines[-n_lines:])
+                else:
+                    log = "".join(lines)
                 self._json({"logs": log or "(empty log)"})
             else:
                 self._json({"logs": "(no launch log found)"})
@@ -1017,6 +1033,10 @@ CRITICAL:
         for b in builds:
             ver = ""
             commit = ""
+            # Extract build number from directory name (e.g. "build-sycl-b9159" → "9159")
+            dm = re.search(r'b(\d+)', b.get("name", ""))
+            if dm:
+                ver = dm.group(1)
             b["build"] = ver
             b["commit"] = commit or ""
             # Detect backend from directory name per-build
