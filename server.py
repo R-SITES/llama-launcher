@@ -559,6 +559,45 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                             seen_names.add(fname)
                     break  # only process first snapshot
 
+        # ── Orthrus GGUF model entry ──
+        orthrus_base = os.path.join(MODELS_DIR, "Orthrus-Qwen3-1.7B")
+        orthrus_gguf = os.path.join(orthrus_base, "orthrus-qwen3-1.7b-Q4_K_M.gguf")
+        orthrus_quant = "Q4_K_M"
+        if not os.path.isfile(orthrus_gguf):
+            orthrus_gguf = os.path.join(orthrus_base, "orthrus-qwen3-1.7b.gguf")
+            orthrus_quant = "f32"
+        if os.path.isfile(orthrus_gguf):
+            size = os.path.getsize(orthrus_gguf)
+            mtime = os.path.getmtime(orthrus_gguf)
+            models.append({
+                "name": f"ORTHRUS Qwen3-1.7B build-sycl-orthrus-b1 ({orthrus_quant})",
+                "size_gb": round(size / (1024**3), 2),
+                "flags": [f"-m {orthrus_gguf}"],
+                "arch_hints": {"reasoning": False, "uncensored": False, "quant": orthrus_quant},
+                "ctx": 4096,
+                "batch": 512,
+                "threads": 8,
+                "modified_time": mtime,
+                "model_id": "chiennv/Orthrus-Qwen3-1.7B",
+            })
+
+
+        # ── Orthrus-MoE 35B GGUF model entry ──
+        orthrus_moe_gguf = os.path.join(MODELS_DIR, 'orthrus-qwen3.5moe-35b.gguf')
+        if os.path.isfile(orthrus_moe_gguf):
+            size = os.path.getsize(orthrus_moe_gguf)
+            mtime = os.path.getmtime(orthrus_moe_gguf)
+            models.append({
+                'name': 'ORTHRUS-MoE Qwen3.5-35B build-sycl-orthrus-b1',
+                'size_gb': round(size / (1024**3), 2),
+                'flags': [f'-m {orthrus_moe_gguf}'],
+                'arch_hints': {'reasoning': False, 'uncensored': False, 'quant': 'Q4_K_M'},
+                'ctx': 4096,
+                'batch': 256,
+                'threads': 8,
+                'modified_time': mtime,
+                'model_id': 'restone/orthrus-qwen3.5moe-35b',
+            })
         # Match local models to HF cache entries for -hf auto-fill
         # Remove common local-only suffixes (e.g. "-MTP-" infix) when matching
         def normalize_hf_name(n):
@@ -1028,6 +1067,20 @@ CRITICAL:
                 "desc": f"{backend} ({dirname.replace('build-', '')})"
             })
 
+        # Build descriptions with PR/feature info
+        _build_descs = {
+            "build-sycl-mtp-moe-opt-b9187":    "SYCL+MTP+MoE [PR#23142] (GDNfix+MoEopt)",
+            "build-sycl-mtp-mainline-b9187":   "SYCL+MTP (GDNfix only, baseline)",
+            "build-sycl-mtp-opt-1.3-b9187":    "SYCL+MTP (graph enab+CONCATfix)",
+            "build-sycl-mtp-opt-1.2-b9187":    "SYCL+MTP (graph exp+profiling)",
+            "build-vulkan-mtp-mainline-b9187":  "VULKAN+MTP (GDNfix, works best)",
+            "build-vulkan-mtp":                 "VULKAN+MTP (legacy b9139)",
+            "build-sycl-b9159":                 "SYCL (no MTP, daily driver 72tok/s)",
+        }
+        for b in builds:
+            if b["name"] in _build_descs:
+                b["desc"] = _build_descs[b["name"]]
+
         # Enrich with build numbers and commit hashes from each binary
         import re
         for b in builds:
@@ -1084,6 +1137,28 @@ CRITICAL:
                         b["mtp"] = "draft-mtp" in (help_out.stdout + help_out.stderr)
                     except Exception:
                         pass
+
+        # ── Orthrus build variant ──
+        orthrus_bin = os.path.expanduser("~/llama.cpp/build-sycl-orthrus/bin/llama-server")
+        if os.path.isfile(orthrus_bin):
+            builds.append({
+                "name": "build-sycl-orthrus",
+                "path": "~/llama.cpp/build-sycl-orthrus/bin/llama-server",
+                "desc": "ORTHRUS Diffusion Decoder",
+                "build": "b1",
+                "commit": "",
+                "backend": "SYCL",
+                "mtp": False,
+            })
+            # Override MTP detection for orthrus
+            try:
+                import subprocess
+                help_out = subprocess.run(
+                    ["strings", orthrus_bin], capture_output=True, text=True, timeout=5
+                )
+                builds[-1]["mtp"] = "draft-mtp" in help_out.stdout
+            except Exception:
+                pass
 
         self._json({"builds": builds, "default": builds[0]["name"] if builds else "build"})
 
