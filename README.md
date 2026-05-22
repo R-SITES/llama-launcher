@@ -1,7 +1,5 @@
 # llama-launcher
 
-![Screenshot](Screenshot-llama-launcher.png)
-
 A web UI that helps you launch and manage [llama.cpp](https://github.com/ggerganov/llama.cpp) inference servers. Browse your local GGUF models, configure launch flags through a visual interface, and fire up a server with one click.
 
 ```
