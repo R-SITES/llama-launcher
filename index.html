@@ -59,7 +59,7 @@
   }
   header .status .dot.ok { background: var(--green); }
   .llama-build-select {
-    font-size: 10px; background: var(--surface); color: var(--text);
+    font-size: 16px; background: var(--surface); color: var(--text);
     border: 1px solid var(--border); border-radius: 10px;
     padding: 1px 8px; font-family: inherit; cursor: pointer;
     max-width: 200px;
@@ -464,6 +464,36 @@
   .optimize-btn:hover { opacity: 0.85; }
   .optimize-btn.working { background: var(--text-dim); pointer-events: none; }
   .optimize-btn.done { background: var(--green); }
+  .bench-btn { background: rgba(42,122,110,.25); border: 1px solid #2a7a6e; color: #7ee0c4; padding: 6px 14px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600; transition: all .15s; }
+  .bench-btn:hover { background: rgba(42,122,110,.45); }
+  .bench-btn.working { background: var(--text-dim); pointer-events: none; }
+  .quicklaunch-btn { background: rgba(210,153,34,.2); border: 1px solid #d29922; color: #e3b341; padding: 6px 14px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600; transition: all .15s; }
+  .quicklaunch-btn:hover { background: rgba(210,153,34,.4); }
+  .quicklaunch-btn.working { background: var(--text-dim); pointer-events: none; }
+  .ql-cancel-btn { background: transparent; border: 1px solid var(--border); color: var(--text-dim); padding: 6px 16px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600; font-family: inherit; transition: all .15s; }
+  .ql-cancel-btn:hover { border-color: var(--text-dim); color: var(--text); background: rgba(255,255,255,.04); }
+  .ql-preset-pills { display: flex; flex-wrap: wrap; gap: 6px; }
+  .ql-preset-pill { background: var(--bg); border: 1px solid var(--border); color: var(--text-dim); padding: 4px 10px; border-radius: 12px; cursor: pointer; font-size: 11px; font-family: inherit; transition: all .15s; max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ql-preset-pill:hover { border-color: var(--accent); color: var(--accent); }
+  .ql-preset-pill .ql-pill-x { margin-left: 6px; color: var(--text-dim); font-weight: 700; }
+  .ql-preset-pill .ql-pill-x:hover { color: #f85149; }
+  .ql-presets-label { font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: .06em; }
+  .bench-modal { width: 1100px; max-width: 96vw; }
+  .bench-grid { display: flex; gap: 0; flex: 1; min-height: 0; }
+  .bench-left { width: 300px; min-width: 260px; border-right: 1px solid var(--border); padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+  .bench-left h3 { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--text-dim); margin: 0 0 4px; }
+  .bench-test-btn { background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 10px 14px; border-radius: 8px; cursor: pointer; font-size: 13px; text-align: left; transition: all .15s; font-family: inherit; }
+  .bench-test-btn:hover { border-color: var(--accent); background: rgba(88,166,255,.08); }
+  .bench-test-btn .bt-sub { display: block; font-size: 11px; color: var(--text-dim); margin-top: 2px; }
+  .bench-right { flex: 1; padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+  .bench-chart { background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 12px; }
+  .bench-chart svg { width: 100%; height: auto; display: block; }
+  .bench-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .bench-table th { text-align: left; color: var(--text-dim); font-weight: 600; padding: 6px 8px; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--surface); }
+  .bench-table td { padding: 6px 8px; border-bottom: 1px solid rgba(48,54,61,.5); }
+  .bench-table tr:hover td { background: rgba(88,166,255,.05); }
+  .bench-empty { color: var(--text-dim); font-size: 13px; text-align: center; padding: 40px 20px; }
+  .bench-note-input { width: 100%; background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 8px 12px; border-radius: 6px; font-family: inherit; font-size: 13px; box-sizing: border-box; }
   .apply-btn {
     background: var(--orange);
     color: #fff;
@@ -1113,6 +1143,21 @@
   .hf-dl-btn:disabled { opacity: 0.4; cursor: not-allowed; }
   .hf-select-btn { background: var(--green); color: #fff; }
   .hf-select-btn:hover { opacity: 0.85; }
+  .hf-quant-pills {
+    display: flex; flex-wrap: wrap; gap: 4px; align-items: center;
+  }
+  .hf-quant-pill {
+    border: 1px solid var(--accent); background: rgba(42,122,110,0.15);
+    color: var(--accent); padding: 3px 8px; border-radius: 4px;
+    font-family: inherit; font-size: 10px; font-weight: 600;
+    cursor: pointer; transition: all 0.12s; white-space: nowrap;
+    display: flex; align-items: center; gap: 3px;
+  }
+  .hf-quant-pill:hover { background: var(--accent); color: #fff; }
+  .hf-quant-pill .sz { color: var(--text-dim); font-weight: 400; }
+  .hf-quant-pill:hover .sz { color: rgba(255,255,255,0.7); }
+  .hf-quant-pill:disabled { opacity: 0.3; cursor: not-allowed; }
+  .hf-result-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
   .hf-loading { text-align: center; padding: 40px; color: var(--text-dim); font-size: 13px; }
   .hf-error { text-align: center; padding: 20px; color: var(--red); font-size: 13px; }
   .download-progress { font-size: 11px; color: var(--orange); margin-left: 8px; }
@@ -1216,7 +1261,9 @@
         <div class="command-header">
           <span class="title">🚀 Launch Command</span>
           <div class="command-buttons">
+            <button class="quicklaunch-btn" id="quickLaunchBtn" onclick="openQuickLaunch()" title="Paste a raw command and launch it directly">⚡ Quick Launch</button>
             <button class="kill-btn" id="killBtn" onclick="killServer()" title="Kill any running llama-server process">🛑 Kill Server</button>
+            <button class="bench-btn" id="benchBtn" onclick="openBenchModal()" title="Benchmark tests + launch history chart">📊 Bench</button>
             <button class="optimize-btn" id="optimizeBtn" onclick="optimizeFlags()">⚙️ Optimize</button>
             <button class="save-btn" id="saveBtn" onclick="showSaveDialog()">💾 Save</button>
             <button class="create-preset-btn save-btn" id="presetBtn" onclick="showPresetDialog()" style="background:rgba(42,122,110,.35);border:1px solid #2a7a6e;">🏷️ Preset</button>
@@ -1367,6 +1414,90 @@
   </div>
 </div>
 
+<!-- Bench Modal: left = test buttons, right = history chart -->
+<div class="modal-overlay" id="benchModal">
+  <div class="modal bench-modal">
+    <div class="modal-header">
+      <h2>📊 Bench — Tests &amp; Launch History</h2>
+      <button class="modal-close" onclick="closeBenchModal()">✕</button>
+    </div>
+    <div class="modal-body" style="padding:0;display:flex;flex-direction:column;min-height:400px;">
+      <div class="bench-grid">
+        <!-- LEFT: test buttons -->
+        <div class="bench-left">
+          <h3>🧪 Tests</h3>
+          <input type="text" id="benchNoteInput" class="bench-note-input" placeholder="Optional note for this capture..." autocomplete="off">
+          <button class="bench-test-btn" onclick="benchCapture('Capture Now', getBenchCtx())">
+            📈 Capture Now
+            <span class="bt-sub">Snapshot current server tok/s + acceptance into history</span>
+          </button>
+          <button class="bench-test-btn" onclick="benchCapture('Long Context', 16384)">
+            📏 Long Context
+            <span class="bt-sub">Label a long-ctx run (16k+). Tok/s captured from live server</span>
+          </button>
+          <button class="bench-test-btn" onclick="benchCapture('DSpark Spec', null)">
+            ⚡ DSpark Spec
+            <span class="bt-sub">Record a DSpark draft run (draft-dspark acceptance)</span>
+          </button>
+          <button class="bench-test-btn" onclick="benchCapture('MTP', null)">
+            🔀 MTP
+            <span class="bt-sub">Record an MTP speculative run</span>
+          </button>
+          <button class="bench-test-btn" onclick="benchCapture('SYCL', null)">
+            🔵 SYCL Build
+            <span class="bt-sub">Record a SYCL-backend run</span>
+          </button>
+          <button class="bench-test-btn" onclick="benchCapture('Vulkan', null)">
+            🟣 Vulkan Build
+            <span class="bt-sub">Record a Vulkan-backend run</span>
+          </button>
+          <button class="bench-test-btn" onclick="benchCapture('Reasoning On', null)">
+            🧠 Reasoning
+            <span class="bt-sub">Record a reasoning-mode run</span>
+          </button>
+          <button class="bench-test-btn" onclick="benchClearHistory()" style="border-color:rgba(248,81,73,.4);color:#f85149;">
+            🗑 Clear History
+            <span class="bt-sub">Delete all bench history entries</span>
+          </button>
+        </div>
+        <!-- RIGHT: chart + table -->
+        <div class="bench-right" id="benchRight">
+          <div class="bench-empty" id="benchEmpty">No bench history yet.<br>Click a test button (or launch a server) to start recording.<br>History auto-saves to bench_history.json.</div>
+          <div class="bench-chart" id="benchChartWrap" style="display:none;">
+            <div style="font-size:12px;color:var(--text-dim);margin-bottom:8px;">tok/s across launches <span style="color:var(--accent);">● SYCL</span> <span style="color:#a371f7;">● Vulkan</span> <span style="color:#7ee0c4;">● Other</span> <span style="color:var(--text-dim);">(size = acceptance)</span></div>
+            <svg id="benchChart" viewBox="0 0 760 260" preserveAspectRatio="xMidYMid meet"></svg>
+          </div>
+          <table class="bench-table" id="benchTableWrap" style="display:none;">
+            <thead><tr><th>Time</th><th>Build</th><th>Model</th><th>ctx</th><th>tok/s</th><th>tg</th><th>Accept</th><th>Spec</th><th>Note</th></tr></thead>
+            <tbody id="benchTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Quick Launch Modal: paste raw command, launch directly -->
+<div class="modal-overlay" id="quickLaunchModal">
+  <div class="modal" style="width:760px;">
+    <div class="modal-header">
+      <h2>⚡ Quick Launch</h2>
+      <button class="modal-close" onclick="closeQuickLaunch()">✕</button>
+    </div>
+    <div class="modal-body" style="padding:16px 20px;display:flex;flex-direction:column;gap:12px;">
+      <div style="font-size:12px;color:var(--text-dim);">Paste a full llama-server launch command below. It runs exactly as-is through the same launch pipeline as the main button (terminal window, --metrics auto-added, stderr captured to ~/llama-launch-stderr.log).</div>
+      <textarea id="quickLaunchInput" class="bench-note-input" style="min-height:120px;font-family:monospace;font-size:12px;resize:vertical;white-space:pre;overflow-x:auto;" placeholder="~/llama.cpp/build-vulkan-b10235-dspark/bin/llama-server -m /path/to/model.gguf -c 32000 -ngl 99 ..." autocomplete="off" spellcheck="false"></textarea>
+      <div id="quickLaunchPresets" class="ql-preset-pills" style="display:none;"></div>
+      <div id="quickLaunchError" style="display:none;color:#f85149;font-size:12px;"></div>
+    </div>
+    <div class="modal-footer" style="justify-content:flex-end;gap:8px;">
+      <button class="ql-cancel-btn" onclick="closeQuickLaunch()">Cancel</button>
+      <button class="launch-btn" id="quickLaunchGoBtn" onclick="quickLaunchGo()">▶️ Launch</button>
+      <button class="save-btn" id="quickLaunchSaveBtn" onclick="saveQuickLaunchPreset()" title="Save this command as a reusable preset">💾 Save As Preset</button>
+    </div>
+  </div>
+</div>
+
 <!-- Toast notification -->
 <div class="toast" id="toast">
   <button class="toast-close" onclick="hideToast()">✕</button>
@@ -1513,6 +1644,283 @@ function closeErrorLogs() {
   document.getElementById('errorLogModal').classList.remove('show');
 }
 
+// ── Bench Modal (tests + launch history chart) ──
+let _benchEntries = [];
+
+function openBenchModal() {
+  document.getElementById('benchModal').classList.add('show');
+  loadBenchHistory();
+}
+
+function closeBenchModal() {
+  document.getElementById('benchModal').classList.remove('show');
+}
+
+function getBenchCtx() {
+  try {
+    const flagId = '-c';
+    if (activeFlags[flagId] && activeFlags[flagId].value) return parseInt(activeFlags[flagId].value, 10) || null;
+  } catch (e) {}
+  return null;
+}
+
+async function loadBenchHistory() {
+  try {
+    const res = await fetch('/api/bench-history');
+    const data = await res.json();
+    _benchEntries = data.entries || [];
+    renderBench();
+  } catch (e) {
+    console.warn('Failed to load bench history', e);
+  }
+}
+
+async function benchCapture(note, ctx) {
+  const btn = event && event.currentTarget;
+  if (btn) { btn.classList.add('working'); btn.disabled = true; }
+  try {
+    const customNote = document.getElementById('benchNoteInput').value.trim();
+    const finalNote = customNote ? customNote : note;
+    const spec = (note && note.toLowerCase().includes('dspark')) ? 'draft-dspark' : '';
+    const res = await fetch('/api/bench-capture', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ note: finalNote, ctx: ctx || null, spec })
+    });
+    const data = await res.json();
+    if (data.success) {
+      _benchEntries = data.entries || [];
+      renderBench();
+      const e = data.entry;
+      const speed = e.tok_s > 0 ? `${e.tok_s} tok/s` : (e.tg ? `${e.tg} tg` : 'no server running');
+      showToast('Bench Captured', `${finalNote} — ${speed}${e.acceptance != null ? `, accept ${Math.round(e.acceptance*100)}%` : ''}`);
+    }
+  } catch (e) {
+    showToast('Bench Failed', String(e.message || e), true);
+  }
+  if (btn) { btn.classList.remove('working'); btn.disabled = false; }
+}
+
+async function benchClearHistory() {
+  if (!confirm('Delete ALL bench history entries?')) return;
+  try {
+    const res = await fetch('/api/bench-clear', { method: 'POST' });
+    const data = await res.json();
+    if (data.success) { _benchEntries = []; renderBench(); showToast('Bench History', 'Cleared'); }
+  } catch (e) {
+    showToast('Clear Failed', String(e.message || e), true);
+  }
+}
+
+function benchColor(build) {
+  const b = String(build || '').toLowerCase();
+  if (b.includes('sycl')) return '#58a6ff';
+  if (b.includes('vulkan')) return '#a371f7';
+  return '#7ee0c4';
+}
+
+function benchShortName(model) {
+  if (!model) return '?';
+  return model.replace(/\.gguf$/i, '').replace(/^Qwen3\.6-/, 'Q').slice(0, 22);
+}
+
+function renderBench() {
+  const empty = document.getElementById('benchEmpty');
+  const chartWrap = document.getElementById('benchChartWrap');
+  const tableWrap = document.getElementById('benchTableWrap');
+  const hasData = _benchEntries.length > 0;
+  empty.style.display = hasData ? 'none' : 'block';
+  chartWrap.style.display = hasData ? 'block' : 'none';
+  tableWrap.style.display = hasData ? 'table' : 'none';
+  if (!hasData) return;
+
+  // ── chart: tok/s per entry, colored by build, dot size = acceptance ──
+  const W = 760, H = 260, padL = 46, padR = 14, padT = 12, padB = 30;
+  const pts = _benchEntries.filter(e => (e.tok_s > 0 || e.tg > 0));
+  const svg = document.getElementById('benchChart');
+  if (pts.length === 0) {
+    svg.innerHTML = `<text x="${W/2}" y="${H/2}" fill="#8b949e" font-size="13" text-anchor="middle">No tok/s data yet — capture while a server is running</text>`;
+    return;
+  }
+  const vals = pts.map(e => e.tok_s > 0 ? e.tok_s : e.tg);
+  const maxV = Math.max(...vals, 1) * 1.15;
+  const n = pts.length;
+  const innerW = W - padL - padR, innerH = H - padT - padB;
+  let out = '';
+  // y gridlines
+  for (let g = 0; g <= 4; g++) {
+    const y = padT + innerH - (g / 4) * innerH;
+    const val = Math.round((g / 4) * maxV);
+    out += `<line x1="${padL}" y1="${y}" x2="${W-padR}" y2="${y}" stroke="#21262d" stroke-width="1"/>`;
+    out += `<text x="${padL-6}" y="${y+4}" fill="#8b949e" font-size="10" text-anchor="end">${val}</text>`;
+  }
+  // x labels: entry time/note
+  const step = innerW / Math.max(n - 1, 1);
+  pts.forEach((e, i) => {
+    const v = e.tok_s > 0 ? e.tok_s : e.tg;
+    const x = padL + i * step;
+    const y = padT + innerH - (v / maxV) * innerH;
+    const r = e.acceptance != null ? 3 + e.acceptance * 7 : 4;
+    const color = benchColor(e.build);
+    out += `<circle cx="${x}" cy="${y}" r="${r.toFixed(1)}" fill="${color}" opacity="0.9"><title>${escHtml(e.ts)} — ${escHtml(e.note||'')} — ${v} tok/s${e.acceptance!=null?' — accept '+Math.round(e.acceptance*100)+'%':''}</title></circle>`;
+    if (n <= 14 && i % 2 === 0) {
+      const label = (e.note && e.note !== 'launch' ? e.note : benchShortName(e.model)).slice(0, 12);
+      out += `<text x="${x}" y="${H-8}" fill="#8b949e" font-size="9" text-anchor="middle">${escHtml(label)}</text>`;
+    }
+  });
+  // line connecting points
+  let line = '';
+  pts.forEach((e, i) => {
+    const v = e.tok_s > 0 ? e.tok_s : e.tg;
+    const x = padL + i * step;
+    const y = padT + innerH - (v / maxV) * innerH;
+    line += `${i===0?'M':'L'}${x.toFixed(1)},${y.toFixed(1)} `;
+  });
+  out = `<path d="${line}" fill="none" stroke="#58a6ff" stroke-width="1.5" opacity="0.5"/>` + out;
+  svg.innerHTML = out;
+
+  // ── table ──
+  const tbody = document.getElementById('benchTableBody');
+  tbody.innerHTML = _benchEntries.slice().reverse().slice(0, 40).map(e => {
+    const acc = e.acceptance != null ? Math.round(e.acceptance * 100) + '%' : '—';
+    const speed = e.tok_s > 0 ? e.tok_s : (e.tg ? `${e.tg}*` : '—');
+    return `<tr>
+      <td style="white-space:nowrap;color:var(--text-dim);">${escHtml(e.ts || '')}</td>
+      <td style="color:${benchColor(e.build)};white-space:nowrap;">${escHtml((e.build||'—').replace('build-',''))}</td>
+      <td>${escHtml(benchShortName(e.model))}</td>
+      <td>${e.ctx || '—'}</td>
+      <td style="font-weight:600;">${speed}</td>
+      <td>${e.tg != null ? e.tg : '—'}</td>
+      <td>${acc}</td>
+      <td>${escHtml(e.spec || '—')}</td>
+      <td>${escHtml(e.note || '')}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ── Quick Launch Modal ──
+function openQuickLaunch() {
+  const modal = document.getElementById('quickLaunchModal');
+  const err = document.getElementById('quickLaunchError');
+  const input = document.getElementById('quickLaunchInput');
+  err.style.display = 'none';
+  // Prefill from the current built command if there's one and input is empty
+  if (!input.value.trim()) {
+    const cmdEl = document.getElementById('commandOutput');
+    if (cmdEl && cmdEl.textContent.trim()) {
+      input.value = cmdEl.textContent.trim();
+    }
+  }
+  modal.classList.add('show');
+  renderQuickLaunchPresets();
+  input.focus();
+  input.select();
+}
+
+function closeQuickLaunch() {
+  document.getElementById('quickLaunchModal').classList.remove('show');
+  document.getElementById('quickLaunchError').style.display = 'none';
+}
+
+async function quickLaunchGo() {
+  const input = document.getElementById('quickLaunchInput');
+  const err = document.getElementById('quickLaunchError');
+  const btn = document.getElementById('quickLaunchGoBtn');
+  const cmd = input.value.trim();
+  if (!cmd) {
+    err.textContent = 'Paste a command first.';
+    err.style.display = 'block';
+    return;
+  }
+  btn.disabled = true;
+  btn.innerHTML = '⏳ Launching...';
+  try {
+    const res = await fetch(`/api/launch?cmd=${encodeURIComponent(cmd)}`);
+    const data = await res.json();
+    if (data.error || !data.success) {
+      err.textContent = data.error || 'Launch failed';
+      err.style.display = 'block';
+      btn.disabled = false;
+      btn.innerHTML = '▶️ Launch';
+      return;
+    }
+    closeQuickLaunch();
+    showToast('Quick Launch', 'Command sent to terminal');
+    // 15s countdown to verify server came up (same pattern as main launch)
+    let checks = 0;
+    const iv = setInterval(async () => {
+      checks++;
+      try {
+        const sres = await fetch('/api/status');
+        const sdata = await sres.json();
+        if (sdata.running) {
+          clearInterval(iv);
+          showToast('Server Up', sdata.selected_model ? `${sdata.selected_model} — ${sdata.throughput} tok/s` : 'llama-server is running');
+        } else if (checks >= 15) {
+          clearInterval(iv);
+        }
+      } catch (e) { clearInterval(iv); }
+    }, 1000);
+  } catch (e) {
+    err.textContent = String(e.message || e);
+    err.style.display = 'block';
+  }
+  btn.disabled = false;
+  btn.innerHTML = '▶️ Launch';
+}
+
+const QUICK_LAUNCH_PRESETS_KEY = 'llama-launcher-quicklaunch-presets';
+
+function getQuickLaunchPresets() {
+  try { return JSON.parse(localStorage.getItem(QUICK_LAUNCH_PRESETS_KEY)) || []; }
+  catch (e) { return []; }
+}
+
+function saveQuickLaunchPresets(list) {
+  localStorage.setItem(QUICK_LAUNCH_PRESETS_KEY, JSON.stringify(list));
+}
+
+function renderQuickLaunchPresets() {
+  const wrap = document.getElementById('quickLaunchPresets');
+  const list = getQuickLaunchPresets();
+  if (!list.length) { wrap.style.display = 'none'; wrap.innerHTML = ''; return; }
+  wrap.style.display = 'flex';
+  wrap.innerHTML = '<span class="ql-presets-label">Saved presets:</span>' + list.map((p, i) =>
+    `<button class="ql-preset-pill" onclick="loadQuickLaunchPreset(${i})" title="${escAttr(p.cmd)}">${escHtml(p.name)}<span class="ql-pill-x" onclick="event.stopPropagation();deleteQuickLaunchPreset(${i})">✕</span></button>`
+  ).join('');
+}
+
+function loadQuickLaunchPreset(i) {
+  const list = getQuickLaunchPresets();
+  if (!list[i]) return;
+  document.getElementById('quickLaunchInput').value = list[i].cmd;
+  showToast('Preset Loaded', list[i].name);
+}
+
+function deleteQuickLaunchPreset(i) {
+  const list = getQuickLaunchPresets();
+  list.splice(i, 1);
+  saveQuickLaunchPresets(list);
+  renderQuickLaunchPresets();
+}
+
+function saveQuickLaunchPreset() {
+  const input = document.getElementById('quickLaunchInput');
+  const cmd = input.value.trim();
+  if (!cmd) {
+    document.getElementById('quickLaunchError').textContent = 'Nothing to save — paste a command first.';
+    document.getElementById('quickLaunchError').style.display = 'block';
+    return;
+  }
+  const name = prompt('Preset name:', cmd.match(/(?:llama-server|build[^\s/]*)\s+.*?-m\s+\S*\/([^\s/]+\.gguf)/)?.[1] || 'Quick Launch ' + (getQuickLaunchPresets().length + 1));
+  if (!name) return;
+  const list = getQuickLaunchPresets();
+  list.push({ name: name.trim().slice(0, 60), cmd });
+  saveQuickLaunchPresets(list);
+  renderQuickLaunchPresets();
+  showToast('Preset Saved', name.trim());
+}
+
 // ── Delete Model ──
 let _pendingDeleteModel = null;
 
@@ -1656,6 +2064,10 @@ function sortHFResults(results) {
         va = a.likes || 0;
         vb = b.likes || 0;
         return asc ? va - vb : vb - va;
+      case 'recent':
+        va = a.last_modified || '';
+        vb = b.last_modified || '';
+        return asc ? va.localeCompare(vb) : vb.localeCompare(va);
       default:
         return 0;
     }
@@ -1695,31 +2107,44 @@ function renderHFResults() {
     <span class="hf-sort-btn${hfSortState.field === 'quant' ? ' active' : ''}" onclick="setHFSort('quant')">Quant${getHFSortArrow('quant')}</span>
     <span class="hf-sort-btn${hfSortState.field === 'arch' ? ' active' : ''}" onclick="setHFSort('arch')">Arch${getHFSortArrow('arch')}</span>
     <span class="hf-sort-btn${hfSortState.field === 'likes' ? ' active' : ''}" onclick="setHFSort('likes')">Likes${getHFSortArrow('likes')}</span>
+    <span class="hf-sort-btn${hfSortState.field === 'recent' ? ' active' : ''}" onclick="setHFSort('recent')">Recent${getHFSortArrow('recent')}</span>
   </div>`;
   resultsEl.innerHTML = sortBar + `<div style="font-size:11px;color:var(--text-dim);padding:4px 20px 8px;">${sorted.length} GGUF models (filtered from ${hfTotalRaw})</div>`
     + sorted.map(m => {
     const cachedTag = m.is_cached ? '<span class="badge cached">📍 Cached</span>' : '';
-    const quantTag = m.quantization ? `<span class="badge quant">${escHtml(m.quantization)}</span>` : '';
     const archTag = m.architecture ? `<span class="badge reason">${escHtml(m.architecture)}</span>` : '';
     const downloads = m.downloads ? `${(m.downloads/1000).toFixed(0)}K` : '';
-    const sz = m.size_gb ? `${m.size_gb} GB` : '';
     const likeTag = m.likes ? `<span>♥ ${m.likes}</span>` : '';
+
+    // Build quant pills from gguf_files
+    const files = m.gguf_files || [];
+    let pillsHtml = '';
+    if (m.is_cached) {
+      pillsHtml = `<button class="hf-select-btn" onclick="closeHFBrowser();loadModelByName('${escAttr(m.model_id)}')">📍 Use</button>`;
+    } else if (files.length > 0) {
+      pillsHtml = '<div class="hf-quant-pills">' + files.map(f => {
+        const szStr = f.size ? formatSize(f.size) : '';
+        const q = f.quantization.toUpperCase();
+        const dlUrl = `https://huggingface.co/${m.model_id}/resolve/main/${f.filename}`;
+        return `<a class="hf-quant-pill" href="${dlUrl}" download style="text-decoration:none" title="${escAttr(f.filename)}">
+          ${escHtml(q)}<span class="sz">${szStr}</span>
+        </a>`;
+      }).join('') + '</div>';
+    } else {
+      pillsHtml = `<button class="hf-dl-btn" onclick="downloadHFModel('${escAttr(m.model_id)}','${escAttr(m.gguf_file || '')}',this)">⬇ Download</button>`;
+    }
+
     return `<div class="hf-result-item">
         <div class="hf-result-info">
-          <div class="hf-result-name">${escHtml(m.model_id)} ${cachedTag}</div>
+          <div class="hf-result-name"><a href="https://huggingface.co/${escAttr(m.model_id)}" target="_blank" rel="noopener" style="color:inherit;text-decoration:none">${escHtml(m.model_id)}</a> ${cachedTag}</div>
           <div class="hf-result-meta">
             ${archTag}
-            ${quantTag}
-            ${sz ? '<span>' + sz + '</span>' : ''}
-            ${likeTag}
             ${downloads ? '<span>' + downloads + '</span>' : ''}
+            ${likeTag}
           </div>
         </div>
         <div class="hf-result-actions" data-model-id="${escAttr(m.model_id)}">
-          ${m.is_cached
-            ? `<button class="hf-select-btn" onclick="closeHFBrowser();loadModelByName('${escAttr(m.model_id)}')"> Use</button>`
-            : `<button class="hf-dl-btn" onclick="downloadHFModel('${escAttr(m.model_id)}', '${escAttr(m.gguf_file || '')}', this)">⬇ Download</button>`
-          }
+          ${pillsHtml}
         </div>
       </div>`;
   }).join('');
@@ -1727,7 +2152,7 @@ function renderHFResults() {
 
 async function downloadHFModel(modelId, filename, btn) {
   btn.disabled = true;
-  btn.innerHTML = '⏳ Queueing...';
+  btn.innerHTML = '⏳';
   try {
     const res = await fetch('/api/download', {
       method: 'POST',
@@ -1736,22 +2161,24 @@ async function downloadHFModel(modelId, filename, btn) {
     });
     const data = await res.json();
     if (data.status === 'started' || data.status === 'downloading') {
-      btn.innerHTML = '⬇ Downloading';
-      btn.style.background = 'var(--orange)';
-      _activeDownloads[modelId] = { status: 'starting', progress: 0, downloaded: 0 };
+      btn.innerHTML = '⬇';
+      btn.style.borderColor = 'var(--orange)';
+      btn.style.color = 'var(--orange)';
+      btn.style.background = 'rgba(227,179,65,0.15)';
+      _activeDownloads[modelId] = { status: 'starting', progress: 0, downloaded: 0, btn: btn };
       pollDownloadProgress(modelId);
       await loadModels();
       filterModels();
     } else {
-      btn.innerHTML = '⚠️ Failed';
+      btn.innerHTML = '⚠️';
       btn.disabled = false;
       showToast('Download Failed', data.error || 'Unknown error', true);
-      setTimeout(() => { btn.innerHTML = '⬇ Download'; }, 3000);
+      setTimeout(() => { btn.innerHTML = btn._origText || '⬇'; }, 3000);
     }
   } catch (e) {
-    btn.innerHTML = '⚠️ Error';
+    btn.innerHTML = '⚠️';
     btn.disabled = false;
-    setTimeout(() => { btn.innerHTML = '⬇ Download'; }, 3000);
+    setTimeout(() => { btn.innerHTML = btn._origText || '⬇'; }, 3000);
   }
 }
 
@@ -1761,18 +2188,16 @@ async function pollDownloadProgress(modelId) {
     const res = await fetch(`/api/download-status?model_id=${encodeURIComponent(modelId)}`);
     if (!res.ok) return;
     const data = await res.json();
-    _activeDownloads[modelId] = data;
+    const task = _activeDownloads[modelId];
+    task.status = data.status;
+    task.progress = data.progress;
     if (data.status === 'downloading' || data.status === 'starting') {
-      // Update the modal button if open
-      const resultActions = document.querySelector(`.hf-result-actions[data-model-id="${modelId}"]`);
-      if (resultActions) {
-        const btn = resultActions.querySelector('button');
-        if (btn) {
-          btn.innerHTML = `⬇ ${Math.round((data.progress || 0) * 100)}%`;
-          btn.style.background = 'var(--orange)';
-        }
+      // Update the specific pill button that started this download
+      const btn = task.btn;
+      if (btn) {
+        const pct = Math.round((data.progress || 0) * 100);
+        btn.innerHTML = `${pct}%`;
       }
-      // Re-render model list to show progress bar
       await loadModels();
       filterModels();
       setTimeout(() => pollDownloadProgress(modelId), 3000);
@@ -2061,9 +2486,22 @@ function toggleFlag(flagId, checked) {
     }
     // Preserve existing value if user already typed one
     const existingVal = activeFlags[flagId] ? activeFlags[flagId].value : '';
+    let defaultValue = existingVal || flag.default || '';
+
+    // Auto-fill --alias with model name (strip path + extension)
+    if (flagId === '--alias' && !existingVal) {
+      const modelPath = (activeFlags['-m'] && activeFlags['-m'].value) ||
+                        (selectedModel && selectedModel.flags && selectedModel.flags[0]) || '';
+      if (modelPath) {
+        // Extract basename, strip .gguf extension
+        const base = modelPath.split('/').pop().replace(/\\.gguf$/i, '');
+        if (base) defaultValue = base;
+      }
+    }
+
     activeFlags[flagId] = {
       active: true,
-      value: existingVal || flag.default || '',
+      value: defaultValue,
       flag: flag
     };
   } else {
@@ -2641,6 +3079,14 @@ function escHtml(s) {
 /* Escape for HTML attribute values (double-quote safe) */
 function escAttr(s) {
   return String(s).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+function formatSize(bytes) {
+  if (!bytes) return '';
+  if (bytes >= 1e9) return (bytes/1e9).toFixed(1) + 'G';
+  if (bytes >= 1e6) return (bytes/1e6).toFixed(0) + 'M';
+  if (bytes >= 1e3) return (bytes/1e3).toFixed(0) + 'K';
+  return bytes + 'B';
 }
 
 /* ── Star Rating (localStorage per model name) ── */

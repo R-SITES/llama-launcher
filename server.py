@@ -24,6 +24,84 @@ from pathlib import Path
 PORT = 9876
 MODELS_DIR = os.path.expanduser("~/models")
 
+# ── Bench history store ──────────────────────────────────────────────
+BENCH_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "bench_history.json")
+BENCH_MAX = 500  # keep at most this many entries
+
+def load_bench_history():
+    """Load bench history entries from disk (list of dicts, newest last)."""
+    try:
+        with open(BENCH_FILE, "r") as f:
+            data = json.load(f)
+            if isinstance(data, list):
+                return data
+    except Exception:
+        pass
+    return []
+
+def save_bench_history(entries):
+    """Persist bench history, capped at BENCH_MAX entries."""
+    try:
+        entries = entries[-BENCH_MAX:]
+        with open(BENCH_FILE, "w") as f:
+            json.dump(entries, f, indent=2)
+    except Exception:
+        pass
+
+def append_bench_entry(entry):
+    """Append one entry (dict) to the bench history file."""
+    entries = load_bench_history()
+    entries.append(entry)
+    save_bench_history(entries)
+    return entries
+
+def parse_acceptance_from_log(log_path):
+    """Extract the last 'draft acceptance = X' value from a llama-server log."""
+    try:
+        with open(log_path, "r", errors="replace") as f:
+            lines = f.readlines()
+        for line in reversed(lines):
+            m = re.search(r"draft acceptance = ([\d.]+)", line)
+            if m:
+                return float(m.group(1))
+    except Exception:
+        pass
+    return None
+
+def parse_tg_from_log(log_path):
+    """Extract the last 'tg = X t/s' value from a llama-server log."""
+    try:
+        with open(log_path, "r", errors="replace") as f:
+            lines = f.readlines()
+        for line in reversed(lines):
+            m = re.search(r"tg = ([\d.]+) t/s", line)
+            if m:
+                return float(m.group(1))
+    except Exception:
+        pass
+    return None
+
+def current_llama_server_state():
+    """Return (running, model_name, build_name) of the running llama-server if any."""
+    try:
+        result = subprocess.run(["pgrep", "-f", "llama-server"], capture_output=True, text=True, timeout=5)
+        if not result.stdout.strip():
+            return False, None, None
+        pid = result.stdout.strip().split("\n")[0]
+        proc_result = subprocess.run(["ps", "-p", pid, "-o", "args="], capture_output=True, text=True, timeout=5)
+        args = proc_result.stdout.strip() if proc_result.stdout.strip() else ""
+        model = None
+        m = re.search(r"-m\s+(\S+)", args)
+        if m:
+            model = os.path.basename(m.group(1).rstrip("'\""))
+        build = None
+        m = re.search(r"(build-[^\s/]+)/bin/llama-server", args)
+        if m:
+            build = m.group(1)
+        return True, model, build
+    except Exception:
+        return False, None, None
+
 
 # ── System hardware detection ────────────────────────────────────────
 def get_system_info():
@@ -256,30 +334,38 @@ def search_hf_gguf(query="", page=1, page_size=100):
             if not gguf_files:
                 continue
 
-            # Determine quantization / file info from the GGUF files
-            quantization = ""
-            gguf_size = 0
-            gguf_filename = ""
+            # Collect ALL GGUF files with their quants
+            gguf_file_list = []
             for fn in gguf_files:
                 n = fn.lower()
-                # Pick the largest GGUF (usually the main model file)
+                fsize = 0
                 for s in siblings:
                     if s.get("rfilename") == fn:
                         fsize = s.get("size", 0)
-                        if fsize > gguf_size:
-                            gguf_size = fsize
-                            gguf_filename = fn
-                            # Extract quantization from filename
-                            for kw in ["q8_0","q6_k","q5_k_m","q5_k_s","q5_0","q4_k_m","q4_k_s","q4_0",
-                                       "q3_k_m","q3_k_s","q2_k","q2_k_p","q2_x","iq4_xs","iq4_nl",
-                                       "iq3_xxs","iq3_s","iq3_m","iq2_s","iq2_m","iq2_xxs",
-                                       "tq3_4s","tq4_0"]:
-                                if kw in n:
-                                    quantization = kw
-                                    break
                         break
-                if quantization:
-                    break
+                # Extract quantization from filename
+                quant = ""
+                for kw in ["q8_0","q6_k","q5_k_m","q5_k_s","q5_0","q4_k_m","q4_k_s","q4_0",
+                           "q3_k_m","q3_k_s","q2_k","q2_k_p","q2_x","iq4_xs","iq4_nl",
+                           "iq3_xxs","iq3_s","iq3_m","iq2_s","iq2_m","iq2_xxs","iq1_s","iq1_m",
+                           "tq3_4s","tq4_0","bf16","f16","f32","fp16","fp32",
+                           "nvfp4","apex","mxfp4","q4_k_xl"]:
+                    if kw in n:
+                        quant = kw
+                        break
+                if not quant:
+                    quant = fn.rsplit(".", 2)[-2] if fn.count(".") >= 2 else ""
+                gguf_file_list.append({
+                    "filename": fn,
+                    "size": fsize,
+                    "quantization": quant,
+                })
+
+            # Pick representative info for legacy fields
+            gguf_file_list.sort(key=lambda x: x["size"], reverse=True)
+            gguf_filename = gguf_file_list[0]["filename"] if gguf_file_list else ""
+            gguf_size = gguf_file_list[0]["size"] if gguf_file_list else 0
+            quantization = gguf_file_list[0]["quantization"] if gguf_file_list else ""
 
             cache_dir_name = f"models--{model_id.replace('/', '--')}"
             is_cached = os.path.isdir(os.path.join(HF_CACHE_DIR, cache_dir_name))
@@ -289,6 +375,7 @@ def search_hf_gguf(query="", page=1, page_size=100):
                 "name": model_id,
                 "gguf_file": gguf_filename,
                 "gguf_size": gguf_size,
+                "gguf_files": gguf_file_list,
                 "size_gb": round(gguf_size / (1024**3), 2) if gguf_size else 0,
                 "size_bytes": gguf_size,
                 "quantization": quantization,
@@ -412,6 +499,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             self._serve_status()
         elif parsed.path == "/api/launch-log":
             self._serve_launch_log()
+        elif self.path == "/api/bench-history":
+            self._serve_bench_history()
         elif parsed.path == "/api/hf-search-gguf":
             q = params.get("q", [""])[0]
             page = int(params.get("page", ["1"])[0])
@@ -433,6 +522,10 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             self._serve_download()
         elif self.path == "/api/delete-model":
             self._serve_delete_model()
+        elif self.path == "/api/bench-capture":
+            self._serve_bench_capture()
+        elif self.path == "/api/bench-clear":
+            self._serve_bench_clear()
         else:
             self.send_response(404)
             self.end_headers()
@@ -985,6 +1078,39 @@ CRITICAL:
         except Exception:
             pass
 
+        # Auto-record the launch in bench history (tok_s fills in on later capture)
+        try:
+            model = None
+            m = re.search(r"-m\s+(\S+)", cmd_str)
+            if m:
+                model = os.path.basename(m.group(1).rstrip("'\""))
+            build = None
+            m = re.search(r"(build-[^\s/]+)/bin/llama-server", cmd_str)
+            if m:
+                build = m.group(1)
+            ctx = None
+            m = re.search(r"-c\s+(\d+)", cmd_str)
+            if m:
+                ctx = int(m.group(1))
+            spec = None
+            m = re.search(r"--spec-type\s+(\S+)", cmd_str)
+            if m:
+                spec = m.group(1)
+            append_bench_entry({
+                "ts": time.strftime("%Y-%m-%d %H:%M:%S"),
+                "running": True,
+                "model": model,
+                "build": build,
+                "tok_s": 0,
+                "tg": None,
+                "acceptance": None,
+                "ctx": ctx,
+                "spec": spec,
+                "note": "launch",
+            })
+        except Exception:
+            pass
+
         return self._json({
             "output": f"llama-server launch command sent to {term_name}",
             "success": True
@@ -1069,13 +1195,28 @@ CRITICAL:
 
         # Build descriptions with PR/feature info
         _build_descs = {
-            "build-sycl-mtp-moe-opt-b9187":    "SYCL+MTP+MoE [PR#23142] (GDNfix+MoEopt)",
-            "build-sycl-mtp-mainline-b9187":   "SYCL+MTP (GDNfix only, baseline)",
-            "build-sycl-mtp-opt-1.3-b9187":    "SYCL+MTP (graph enab+CONCATfix)",
-            "build-sycl-mtp-opt-1.2-b9187":    "SYCL+MTP (graph exp+profiling)",
-            "build-vulkan-mtp-mainline-b9187":  "VULKAN+MTP (GDNfix, works best)",
-            "build-vulkan-mtp":                 "VULKAN+MTP (legacy b9139)",
-            "build-sycl-b9159":                 "SYCL (no MTP, daily driver 72tok/s)",
+            "build-sycl-b9780": "SYCL master b9780 (#24578 reorder fix, #24452 MoE MUL_MAT_ID, #24340 flash mtp3, oneAPI 2026.0, SYCL F16)",
+            "build-sycl-b9780-xmx": "SYCL+XMX b9780 (XMX tiling enabled, same commit, prefill-optimized)",
+            "build-sycl-b9780-pr25025-xmx": "SYCL+XMX b9780 + #25025 (oneMKL GEMM FA, XMX-accel prefill w/ quant KV, ~91 tg64)",
+            "build-sycl-b9780-pr25064-xmx": "SYCL+XMX b9780 + #25064 (Q2_K DMMV reorder — Q2_K only, no Q4_K effect, ~91 tg64)",
+            "build-sycl-b9780-pr22105": "SYCL b9780 + #22105 (DFlash spec decode — COMPILES, needs draft model + 2nd GPU to run)",
+            "build-sycl-b9781": "SYCL master b9781 (#24152 split-mode tensor, #24941 softmax clamp, #24838 bf16 bin_bcast, #20793 split-sync, oneAPI 2026.0, F16)",
+            "build-sycl-b9781-xmx": "SYCL+XMX b9781 (XMX tiling + #24152 split-mode tensor, #24941 softmax, oneAPI 2026.0)",
+            "build-sycl-b9782": "SYCL master b9782 (#24162 DeepSeek V4 arch, #25063 DMMV perf, #25231-25264 SYCL fixes, oneAPI 2026.0, F16, MTP)",
+            "build-sycl-b9795": "SYCL master b9795 (latest, test DS4 SYCL crash, oneAPI 2026.0, F16)",
+            "build-sycl-b10108": "★★★ SYCL LATEST b10108 (0a50d9909, oneAPI 2026.0, F16, MTP, Jul 23 2026) ★★★",
+            "build-sycl-b10121-dspark": "🔥 SYCL b10121 + #25173 DSpark (DFlash + Markov head, DS4 speculative decode, ~3x speedup target)",
+            "build-sycl-b10235-dspark": "D-Spark b10235 (official #25173+#25784+#26458, DSV4 backbone + MTP + Markov head, oneAPI 2026.0, F16)",
+            "build-vulkan-b10235-dspark": "VULKAN D-Spark b10235 (same DSpark master, Mesa 26.1.5 kisak, BMG G31 - speed test vs SYCL)",
+            "build-sycl-mtp-b10235": "SYCL+MTP b10235 (MTP self-spec n-max4, no DSpark, 2026-08-14 vLLM-compare build)",
+            "build-vulkan-b10121": "Vulkan b10121 ★DS4 (clean master, latest, Mesa 26, no PRs)",
+            "build-vulkan-b9780": "Vulkan master b9780 (Mesa 26, stock Vulkan)",
+            "build-vulkan-b9782": "Vulkan master b9782 (#24162 DeepSeek V4 arch, same commit as SYCL b9782, Mesa 26)",
+            "build-vulkan-mtp-mainline-b9967": "VULKAN+MTP b9967 (GDNfix, 118+ tok/s Qwen3.6-35B-A3B Q4, MTP 82-88% accept)",
+            "build-vulkan-mtp-mainline-b9982": "VULKAN+MTP b9982 (checkpoint fix, 120+ tok/s heretic Q4_K_M, Mesa 26.1.4)",
+            "build-vulkan-fp32-b9982": "VULKAN+MTP b9982 (3-draft MTP, 140 tok/s heretic Q4_K_M, Mesa 26.1.4)",
+            "build-prism-vulkan-nomtp": "PrismML Bonsai fork 38c66ad (Q1_0 native, cooperative matrix, Vulkan, No MTP)",
+            "build-vulkan-b10034-bonsai": "Mainline b10034 (Bonsai GGUF compat, cooperative matrix, Vulkan, MTP for MTP models)",
         }
         for b in builds:
             if b["name"] in _build_descs:
@@ -1137,6 +1278,14 @@ CRITICAL:
                         b["mtp"] = "draft-mtp" in (help_out.stdout + help_out.stderr)
                     except Exception:
                         pass
+
+        # ── MTP overrides for builds where --help detection is wrong ──
+        _build_mtp_overrides = {
+            "build-prism-vulkan-nomtp": False,  # prism fork lists draft-mtp in help but has no MTP implementation
+        }
+        for b in builds:
+            if b["name"] in _build_mtp_overrides:
+                b["mtp"] = _build_mtp_overrides[b["name"]]
 
         # ── Orthrus build variant ──
         orthrus_bin = os.path.expanduser("~/llama.cpp/build-sycl-orthrus/bin/llama-server")
@@ -1253,6 +1402,75 @@ CRITICAL:
             "throughput": throughput if isinstance(throughput, (int, float)) else 0,
             "selected_model": selected_model
         })
+
+    def _serve_bench_history(self):
+        """Return all bench history entries (newest last)."""
+        self._json({"entries": load_bench_history(), "file": os.path.basename(BENCH_FILE)})
+
+    def _serve_bench_capture(self):
+        """Capture current llama-server state into bench history.
+        POST body: {"note": "optional label", "ctx": optional int, "spec": optional string}
+        Reads throughput from the running server's /metrics, acceptance + tg from the launch log.
+        """
+        content_len = int(self.headers.get("Content-Length", 0))
+        body = {}
+        if content_len:
+            try:
+                body = json.loads(self.rfile.read(content_len).decode("utf-8"))
+            except Exception:
+                body = {}
+
+        note = str(body.get("note", "") or "")
+        ctx = body.get("ctx")
+        spec = str(body.get("spec", "") or "")
+
+        running, model, build = current_llama_server_state()
+
+        # throughput from /metrics (same parse as _serve_status)
+        throughput = 0
+        if running:
+            try:
+                with urllib.request.urlopen("http://localhost:8080/metrics", timeout=3) as resp:
+                    metrics_text = resp.read().decode("utf-8")
+                for line in metrics_text.split("\n"):
+                    line = line.strip()
+                    if line.startswith("#") or not line:
+                        continue
+                    parts = line.split()
+                    if len(parts) < 2:
+                        continue
+                    if parts[0] == "llamacpp:predicted_tokens_seconds":
+                        try:
+                            throughput = round(float(parts[1]), 1)
+                        except ValueError:
+                            pass
+            except Exception:
+                throughput = 0
+
+        # acceptance + tg from launch log
+        log_path = os.path.expanduser("~/llama-launch-stderr.log")
+        acceptance = parse_acceptance_from_log(log_path)
+        tg = parse_tg_from_log(log_path)
+
+        entry = {
+            "ts": time.strftime("%Y-%m-%d %H:%M:%S"),
+            "running": running,
+            "model": model,
+            "build": build,
+            "tok_s": throughput,
+            "tg": tg,
+            "acceptance": acceptance,
+            "ctx": ctx,
+            "spec": spec,
+            "note": note,
+        }
+        entries = append_bench_entry(entry)
+        self._json({"success": True, "entry": entry, "entries": entries})
+
+    def _serve_bench_clear(self):
+        """Wipe bench history."""
+        save_bench_history([])
+        self._json({"success": True, "entries": []})
 
     def _serve_index(self):
         with open(os.path.join(os.path.dirname(__file__), "index.html"), "r") as f:
